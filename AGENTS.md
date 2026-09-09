@@ -36,6 +36,7 @@ Verify changes with `npm run build` and `npm run lint` before finishing. There a
 - **Cards are A/B pairs, not term/definition.** The two CSV columns are labeled A (what you're asked) and B (the answer you type). They can be terms, definitions, practice problems, anything. Extra columns beyond the second are ignored.
 - **`prompt()` for everything.** All data entry (pasting a deck) uses the browser `prompt()` dialog. This is deliberate — it's easy to maintain. Don't build a fancy sidebar/form UI unless asked.
 - **Learn mode only.** Type-in checking: A is shown, user types B, answer is compared with case/whitespace-insensitive normalization. Correct answers auto-advance (~700ms); wrong answers show the correct one and need a manual Continue. Missed cards are shuffled into the next round; rounds repeat until a round has zero misses.
+- **Override** — when an answer is marked wrong, an Override button (shown only if the user typed something, never after Show answer) counts the card as correct: it's removed from the missed list and the round advances as if correct.
 - **Top button bar** with New deck / Restart / Skip / Show answer. Skip and Show answer both count the card as missed.
 - **Dark theme only.** No light theme. JetBrains Mono, rounded corners, purple accent. Theme tokens are CSS variables in `src/index.css`.
 - **No localStorage / no backend.** Deliberate for the base setup.

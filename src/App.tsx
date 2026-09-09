@@ -76,22 +76,33 @@ export default function App() {
     loadDeck(cards)
   }
 
-  function advance() {
+  function advanceWithMissed(missed: Card[]) {
     window.clearTimeout(timerRef.current)
     setFeedback(null)
     setInput('')
     const nextIndex = rs.index + 1
     if (nextIndex < rs.cards.length) {
-      setRs({ ...rs, index: nextIndex })
+      setRs({ ...rs, index: nextIndex, missed })
       return
     }
     // Round finished.
     setCompletedRounds(rs.round)
-    if (rs.missed.length === 0) {
+    if (missed.length === 0) {
       setPhase('done')
     } else {
-      setRs({ round: rs.round + 1, cards: shuffle(rs.missed), index: 0, missed: [] })
+      setRs({ round: rs.round + 1, cards: shuffle(missed), index: 0, missed: [] })
     }
+  }
+
+  function advance() {
+    advanceWithMissed(rs.missed)
+  }
+
+  function override() {
+    if (!current || feedback === null) return
+    // Count the card as known (e.g. it was just a typo): pull it out of the
+    // missed list and move on exactly like a correct answer.
+    advanceWithMissed(rs.missed.filter((c) => c !== current))
   }
 
   function check() {
@@ -202,7 +213,12 @@ export default function App() {
                     : <>Not quite — you typed “{feedback.userAnswer}”.</>}
                 </div>
                 <div className="reveal">Correct answer: <strong>{current.b}</strong></div>
-                <button className="primary continue-btn" onClick={advance}>Continue</button>
+                <div className="actions">
+                  <button className="primary" onClick={advance}>Continue</button>
+                  {feedback.userAnswer !== '' && (
+                    <button onClick={override} title="Count this as correct (e.g. you just misspelled it)">Override</button>
+                  )}
+                </div>
               </div>
             )}
           </div>

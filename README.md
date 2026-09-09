@@ -8,6 +8,7 @@ A free, local-first flashcard study app. Paste a deck as CSV and drill it in lea
 - **Learn mode** — type-in answer checking with forgiving matching (case- and whitespace-insensitive)
 - **Rounds** — missed cards are shuffled into the next round; keep going until a round is flawless
 - **Skip / Show answer** — escape hatches when you're stuck (both send the card to the next round)
+- **Override** — misspelled an answer you actually knew? Count it as correct instead of re-drilling it
 - **Zero dependencies on services** — no backend, no API keys, no accounts. Runs entirely in the browser.
 - **Dark theme** — JetBrains Mono, bundled locally via `@fontsource` (no CDN)
 
@@ -51,7 +52,7 @@ The instructions enforce quizet's CSV rules (two columns, quoting, no extra comm
 
 1. A card shows its A side; type the B side and hit Check (or Enter).
 2. A correct answer flashes green and advances to the next card.
-3. A wrong answer shows your attempt alongside the correct one; hit Continue to move on.
+3. A wrong answer shows your attempt alongside the correct one; hit Continue to move on — or **Override** if you just misspelled it, which counts the card as correct and removes it from the next round.
 4. At the end of a round, every missed card is shuffled into the next round.
 5. A round with zero misses completes the deck, with your total round count.
 

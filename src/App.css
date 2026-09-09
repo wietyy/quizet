@@ -218,7 +218,9 @@ button.primary:hover:not(:disabled) {
   color: var(--text);
 }
 
-.feedback .continue-btn {
+.feedback .actions {
+  display: flex;
+  gap: 8px;
   align-self: flex-start;
 }
 
