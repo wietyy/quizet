@@ -39,7 +39,7 @@ Verify changes with `npm run build` and `npm run lint` before finishing. There a
 - **Override** — when an answer is marked wrong, an Override button (shown only if the user typed something, never after Show answer) counts the card as correct: it's removed from the missed list and the round advances as if correct.
 - **Top button bar** with New deck / Restart / Skip / Show answer. Skip and Show answer both count the card as missed.
 - **Dark theme only.** No light theme. JetBrains Mono, rounded corners, purple accent. Theme tokens are CSS variables in `src/index.css`.
-- **No localStorage / no backend.** Deliberate for the base setup.
+- **Saved decks live in `localStorage`; nothing else does.** One JSON array under the `quizet.decks` key, each entry `{ name, data }` where `data` is the raw CSV text exactly as pasted. The top bar's Save and Load buttons drive it entirely through `prompt()` (Load also offers `d` for the delete menu). No backend, no accounts, no automatic persistence — in-progress rounds are still lost on reload.
 
 ## Gotchas
 

@@ -32,9 +32,56 @@ function shuffle<T>(items: T[]): T[] {
   return arr
 }
 
+interface SavedDeck {
+  name: string
+  data: string
+}
+
+const STORAGE_KEY = 'quizet.decks'
+
+function isSavedDeck(value: unknown): value is SavedDeck {
+  if (typeof value !== 'object' || value === null) return false
+  const candidate = value as Record<string, unknown>
+  return typeof candidate.name === 'string' && typeof candidate.data === 'string'
+}
+
+/** Read the saved decks, ignoring anything malformed or unreadable. */
+function readSavedDecks(): SavedDeck[] {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return []
+    const parsed: unknown = JSON.parse(raw)
+    return Array.isArray(parsed) ? parsed.filter(isSavedDeck) : []
+  } catch {
+    return []
+  }
+}
+
+function writeSavedDecks(decks: SavedDeck[]) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(decks))
+  } catch {
+    window.alert('Could not write to browser storage — decks were not saved.')
+  }
+}
+
+/** `1. French basics` per line, for pasting into a prompt(). */
+function deckListText(decks: SavedDeck[]): string {
+  return decks.map((deck, i) => `${i + 1}. ${deck.name}`).join('\n')
+}
+
+/** Parse a typed 1-based list index, or null if it isn't a valid choice. */
+function parseChoice(choice: string, count: number): number | null {
+  if (!/^\d+$/.test(choice)) return null
+  const index = Number.parseInt(choice, 10)
+  return index >= 1 && index <= count ? index : null
+}
+
 export default function App() {
   const [phase, setPhase] = useState<Phase>('idle')
   const [deck, setDeck] = useState<Card[]>([])
+  // Raw CSV of the loaded deck, kept so saving round-trips the original text.
+  const [deckCsv, setDeckCsv] = useState('')
   const [rs, setRs] = useState<RoundState>({ round: 1, cards: [], index: 0, missed: [] })
   const [completedRounds, setCompletedRounds] = useState(0)
   const [input, setInput] = useState('')
@@ -54,10 +101,11 @@ export default function App() {
   // Clean up any pending auto-advance timer.
   useEffect(() => () => window.clearTimeout(timerRef.current), [])
 
-  function loadDeck(cards: Card[]) {
+  function loadDeck(cards: Card[], csv: string) {
     generationRef.current++
     window.clearTimeout(timerRef.current)
     setDeck(cards)
+    setDeckCsv(csv)
     setCompletedRounds(0)
     setRs({ round: 1, cards: shuffle(cards), index: 0, missed: [] })
     setInput('')
@@ -73,7 +121,79 @@ export default function App() {
       window.alert('No cards found — make sure each row has an A and a B column.')
       return
     }
-    loadDeck(cards)
+    loadDeck(cards, text)
+  }
+
+  function saveDeck() {
+    if (deckCsv === '') return
+    const answer = window.prompt('Name this deck:')
+    if (answer === null) return // cancelled
+    const name = answer.trim()
+    if (name === '') {
+      window.alert('Please enter a name.')
+      return
+    }
+    const decks = readSavedDecks()
+    const existing = decks.findIndex((saved) => saved.name === name)
+    if (existing >= 0) {
+      if (!window.confirm(`A deck named “${name}” already exists. Overwrite it?`)) return
+      decks[existing] = { name, data: deckCsv }
+    } else {
+      decks.push({ name, data: deckCsv })
+    }
+    writeSavedDecks(decks)
+    window.alert(`Saved “${name}”.`)
+  }
+
+  function loadSavedDeck() {
+    const decks = readSavedDecks()
+    if (decks.length === 0) {
+      window.alert('No saved decks yet — use Save to store the current deck.')
+      return
+    }
+    const answer = window.prompt(
+      `Saved decks — type a number to load, or “d” to delete one:\n\n${deckListText(decks)}`,
+    )
+    if (answer === null) return // cancelled
+    const choice = answer.trim().toLowerCase()
+    if (choice === 'd') {
+      deleteSavedDeck(decks)
+      return
+    }
+    const index = parseChoice(choice, decks.length)
+    if (index === null) {
+      window.alert('Not a valid choice.')
+      return
+    }
+    const picked = decks[index - 1]
+    const cards = parseCsv(picked.data)
+    if (cards.length === 0) {
+      window.alert(`“${picked.name}” has no cards in it.`)
+      return
+    }
+    loadDeck(cards, picked.data)
+  }
+
+  function deleteSavedDeck(decks: SavedDeck[]) {
+    const answer = window.prompt(
+      `Delete which deck? Type a number, or “all” to remove everything:\n\n${deckListText(decks)}`,
+    )
+    if (answer === null) return // cancelled
+    const choice = answer.trim().toLowerCase()
+    if (choice === 'all') {
+      if (!window.confirm(`Delete all ${decks.length} saved deck(s)?`)) return
+      writeSavedDecks([])
+      window.alert('All saved decks deleted.')
+      return
+    }
+    const index = parseChoice(choice, decks.length)
+    if (index === null) {
+      window.alert('Not a valid choice.')
+      return
+    }
+    const [removed] = decks.splice(index - 1, 1)
+    writeSavedDecks(decks)
+    window.alert(`Deleted “${removed.name}”.`)
   }
 
   function advanceWithMissed(missed: Card[]) {
@@ -136,7 +256,7 @@ export default function App() {
       promptForDeck()
       return
     }
-    loadDeck(deck)
+    loadDeck(deck, deckCsv)
   }
 
   return (
@@ -145,6 +265,8 @@ export default function App() {
         <span className="brand">quizet</span>
         <nav className="topbar-actions">
           <button onClick={promptForDeck}>New deck</button>
+          <button onClick={saveDeck} disabled={deckCsv === ''}>Save</button>
+          <button onClick={loadSavedDeck}>Load</button>
           <button onClick={restart} disabled={phase === 'idle'}>Restart</button>
           <button onClick={skip} disabled={phase !== 'learning' || feedback !== null}>Skip</button>
           <button onClick={showAnswer} disabled={phase !== 'learning' || feedback !== null}>Show answer</button>
